@@ -1,51 +1,65 @@
 import { useState, useEffect } from 'react';
+import useLocalCache from '../hooks/useLocalCache';
 import { getBoard } from '../api/boardApi';
 import Column from './Column';
 
-
 function Board({ boardId }) {
-  const [board, setBoard] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // 1. Instantly hydrate from whatever was last seen, so we never render blank.
+  const [board, setBoard] = useLocalCache(`collabboard:board:${boardId}`, null);
 
+  const [isSyncing, setIsSyncing] = useState(true);
+  const [syncError, setSyncError] = useState(null);
+
+  // 2. Background fetch for fresh data — cached value stays on screen
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
 
-    async function loadBoard() {
-      setLoading(true);
-      setError(null);
+    async function loadFreshBoard() {
+      setIsSyncing(true);
+      setSyncError(null);
       try {
-        const data = await getBoard(boardId);
-        if (isMounted) {
-          setBoard(data);
+        const freshBoard = await getBoard(boardId);
+        if (!cancelled) {
+          setBoard(freshBoard); // updates state AND re-caches via the hook
         }
       } catch (err) {
-        if (isMounted) {
-          setError(err.message);
+        if (!cancelled) {
+          // Network down / API error: just keep showing cached board.
+          setSyncError(err.message || 'Failed to fetch fresh data');
+          console.warn('Board fetch failed, showing cached state:', err);
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (!cancelled) setIsSyncing(false);
       }
     }
 
-    loadBoard();
-
+    loadFreshBoard();
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
-  }, [boardId]);
+  }, [boardId, setBoard]);
 
-  if (loading) return <div className="board-loading">Loading board…</div>;
-  if (error) return <div className="board-error">Error: {error}</div>;
+  // Only true on a first-ever load with no cache and no response yet
+  if (!board && isSyncing) {
+    return <div className="board-loading">Loading board…</div>;
+  }
+
+  if (!board && syncError) {
+    return <div className="board-error">Error: {syncError}</div>;
+  }
+
   if (!board) return null;
 
   return (
     <div className="board">
+      {syncError && (
+        <div className="offline-warning" style={{ color: 'orange', padding: '8px' }}>
+          Offline mode: Viewing cached version
+        </div>
+      )}
       <h1>{board.title}</h1>
       <div className="board-columns">
-        {board.columns.map((column) => (
+        {board.columns && board.columns.map((column) => (
           <Column key={column.id} column={column} />
         ))}
       </div>
