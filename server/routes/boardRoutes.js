@@ -1,13 +1,13 @@
 const express = require('express');
 const {
-  getBoard,
+  getBoardById,
   createBoard,
   updateBoard,
 } = require('../controllers/boardController');
 
 const router = express.Router();
 
-router.get('/:id', getBoard);
+router.get('/:id', getBoardById);
 router.post('/', createBoard);
 router.patch('/:id', updateBoard);
 
