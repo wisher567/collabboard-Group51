@@ -2,19 +2,10 @@
  * server/tests/tasks.test.js
  *
  * Tests for the Kanban board app's Task API.
- * Assumes:
- *  - server/tests/setup.js is already configured globally (in-memory MongoDB via mongodb-memory-server)
- *  - Express app is exported from server/index.js as `app` (not calling app.listen there)
- *  - Task model has fields: title, columnId, boardId, version
- *  - Task endpoints:
- *      POST   /api/tasks              -> create a task
- *      PATCH  /api/tasks/:id          -> update a task (expects { columnId, version } in body)
- *  - PATCH checks the incoming `version` against the stored version:
- *      - if it matches: apply update, increment version, return 200
- *      - if it doesn't match: return 409 Conflict
- *
- * Adjust field/route names below if your actual API differs.
+ * Tests optimistic concurrency (version checking) on PATCH.
  */
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 
 const request = require('supertest');
 const mongoose = require('mongoose');
@@ -23,9 +14,7 @@ const app = require('../index');
 const Board = require('../models/Board');
 const Task = require('../models/Task');
 
-// Use the same secret your auth middleware verifies against.
-// If your app reads this from process.env.JWT_SECRET, make sure that's set in setup.js/.env.test
-const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 function makeTestToken(userId = new mongoose.Types.ObjectId().toString()) {
   return jwt.sign({ id: userId }, JWT_SECRET, { expiresIn: '1h' });
@@ -35,6 +24,13 @@ describe('Task API', () => {
   let token;
   let board;
 
+  afterEach(async () => {
+    const collections = mongoose.connection.collections;
+    for (const key of Object.keys(collections)) {
+      await collections[key].deleteMany({});
+    }
+  });
+
   beforeEach(async () => {
     token = makeTestToken();
 
@@ -42,8 +38,8 @@ describe('Task API', () => {
     board = await Board.create({
       title: 'Test Board',
       columns: [
-        { id: 'col-1', title: 'To Do', tasks: [] },
-        { id: 'col-2', title: 'In Progress', tasks: [] },
+        { id: 'col-1', title: 'To Do' },
+        { id: 'col-2', title: 'In Progress' },
       ],
     });
   });

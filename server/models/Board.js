@@ -26,6 +26,18 @@ const boardSchema = new mongoose.Schema(
       type: [columnSchema],
       default: [],
     },
+    members: {
+      type: [
+        {
+          id: String,
+          name: String,
+          email: String,
+          avatar: String,
+          role: String,
+        },
+      ],
+      default: [],
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
