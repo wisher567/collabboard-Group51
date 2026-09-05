@@ -21,8 +21,11 @@ const taskSchema = new mongoose.Schema(
     },
 
     assignedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      type: mongoose.Schema.Types.Mixed,
+    },
+
+    assignee: {
+      type: mongoose.Schema.Types.Mixed,
     },
 
     // Used for optimistic concurrency and conflict detection

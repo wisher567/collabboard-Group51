@@ -1,13 +1,28 @@
-process.env.JWT_SECRET = 'test-secret';
+/**
+ * server/tests/auth.test.js
+ *
+ * Tests for the Auth API (register + login) against in-memory MongoDB.
+ */
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 
 const request = require('supertest');
+const mongoose = require('mongoose');
 const app = require('../index');
 
 describe('Auth API', () => {
+  afterEach(async () => {
+    const collections = mongoose.connection.collections;
+    for (const key of Object.keys(collections)) {
+      await collections[key].deleteMany({});
+    }
+  });
+
   test('successfully registers a new user', async () => {
     const response = await request(app)
       .post('/api/auth/register')
       .send({
+        name: 'Test User',
         email: 'test@example.com',
         password: 'password123',
       });
@@ -18,9 +33,20 @@ describe('Auth API', () => {
   });
 
   test('fails to register with a duplicate email', async () => {
+    // Register first
+    await request(app)
+      .post('/api/auth/register')
+      .send({
+        name: 'First User',
+        email: 'test@example.com',
+        password: 'password123',
+      });
+
+    // Try to register again with the same email
     const response = await request(app)
       .post('/api/auth/register')
       .send({
+        name: 'Second User',
         email: 'test@example.com',
         password: 'password123',
       });
@@ -36,6 +62,7 @@ describe('Auth API', () => {
     await request(app)
       .post('/api/auth/register')
       .send({
+        name: 'Login User',
         email,
         password,
       });
@@ -53,4 +80,3 @@ describe('Auth API', () => {
     expect(typeof response.body.token).toBe('string');
   });
 });
-

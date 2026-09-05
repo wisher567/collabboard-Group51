@@ -1,4 +1,3 @@
-import { expect, vi, beforeEach, afterEach, describe, it } from 'vitest';
 import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -8,11 +7,12 @@ import { getBoard } from '../api/boardApi';
 
 // --- Mocks -----------------------------------------------------------
 
-vi.mock('../hooks/useLocalCache');
-vi.mock('../api/boardApi');
+jest.mock('../hooks/useLocalCache');
+jest.mock('../api/boardApi');
 
 // Column is mocked so these tests focus on Board's own logic.
-vi.mock('./Column', () => ({
+jest.mock('./Column', () => ({
+  __esModule: true,
   default: ({ column }) => (
     <div data-testid="column">
       <h2>{column.title}</h2>
@@ -74,9 +74,9 @@ function useRealStateBackedCache(_key, initialValue) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  jest.clearAllMocks();
 
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
 
   useLocalCache.mockImplementation(useRealStateBackedCache);
 });
@@ -162,7 +162,7 @@ describe('Board', () => {
   it('renders cached board data immediately, before the fetch resolves', () => {
     useLocalCache.mockReturnValue([
       cachedBoard,
-      vi.fn(),
+      jest.fn(),
     ]);
 
     getBoard.mockReturnValue(new Promise(() => {}));
@@ -181,7 +181,7 @@ describe('Board', () => {
   });
 
   it('shows an offline warning and keeps the cached board when a background fetch fails', async () => {
-    const setBoard = vi.fn();
+    const setBoard = jest.fn();
 
     useLocalCache.mockReturnValue([
       cachedBoard,

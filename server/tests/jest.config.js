@@ -1,6 +1,6 @@
 module.exports = {
   testEnvironment: 'node',
-  setupFilesAfterEach: [], // not used here
+  rootDir: '..',
   setupFiles: [],
   globalSetup: undefined,
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
